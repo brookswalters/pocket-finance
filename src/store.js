@@ -114,7 +114,7 @@ const SEED_BUDGET_CATEGORIES = [
 ]
 
 const SEED_GOLF = {
-  membershipCost: 554.00,
+  membershipCost: 590.00,
   membershipPaidDate: '2026-04-13',
   membershipYear: 2026,
   visitTypes: [
@@ -161,6 +161,13 @@ export function initStore() {
     if (load(KEYS.bills, []).length === 0)  save(KEYS.bills,  SEED_BILLS)
     if (load(KEYS.budget, []).length === 0) save(KEYS.budget, SEED_BUDGET_CATEGORIES)
     save(KEYS.settings, { ...settings, seedVersion: 2 })
+  }
+
+  // Migration v3: update golf membership cost to $590
+  if (!settings.seedVersion || settings.seedVersion < 3) {
+    const golf = load(KEYS.golf, null)
+    if (golf) save(KEYS.golf, { ...golf, membershipCost: 590.00 })
+    save(KEYS.settings, { ...load(KEYS.settings, settings), seedVersion: 3 })
   }
 }
 
