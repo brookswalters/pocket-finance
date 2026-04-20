@@ -89,12 +89,28 @@ const SEED_LOANS = [
 ]
 
 const SEED_BILLS = [
-  // You'll fill in the full list in Phase 5 — placeholder structure:
-  // { id, name, amount, dueDay, category, autopay, active }
+  { id: uuid(), name: 'Rent',         amount: 900.00, dueDay: 2,  category: 'Bills & Utilities', autopay: false, active: true },
+  { id: uuid(), name: 'Car Payment',  amount: 479.25, dueDay: 6,  category: 'Auto & Transport',  autopay: false, active: true },
+  { id: uuid(), name: 'Verizon Fios', amount: 123.88, dueDay: 25, category: 'Bills & Utilities', autopay: true,  active: true },
+  { id: uuid(), name: 'Gym',          amount: 52.50,  dueDay: 2,  category: 'Health & Wellness', autopay: false, active: true },
+  { id: uuid(), name: 'Electric',     amount: 33.18,  dueDay: 2,  category: 'Bills & Utilities', autopay: false, active: true },
+  { id: uuid(), name: 'Internet',     amount: 13.34,  dueDay: 2,  category: 'Bills & Utilities', autopay: false, active: true },
 ]
 
 const SEED_BUDGET_CATEGORIES = [
-  // Filled in Phase 5 with your Rocket Money data
+  { id: uuid(), name: 'Auto & Transport',  budgeted: 70,  color: '#f59e0b' },
+  { id: uuid(), name: 'Chase Loan',        budgeted: 250, color: '#3b82f6' },
+  { id: uuid(), name: 'Dining & Drinks',   budgeted: 150, color: '#f97316' },
+  { id: uuid(), name: 'Eating Out',        budgeted: 150, color: '#ef4444' },
+  { id: uuid(), name: 'Groceries',         budgeted: 300, color: '#10b981' },
+  { id: uuid(), name: 'Health & Wellness', budgeted: 45,  color: '#06b6d4' },
+  { id: uuid(), name: 'Loan Payment',      budgeted: 280, color: '#8b5cf6' },
+  { id: uuid(), name: 'Pets',              budgeted: 90,  color: '#84cc16' },
+  { id: uuid(), name: 'Poker',             budgeted: 30,  color: '#6b7280' },
+  { id: uuid(), name: 'Shopping',          budgeted: 50,  color: '#ec4899' },
+  { id: uuid(), name: 'Software & Tech',   budgeted: 45,  color: '#14b8a6' },
+  { id: uuid(), name: 'Sports Betting',    budgeted: 100, color: '#a855f7' },
+  { id: uuid(), name: 'Everything Else',   budgeted: 70,  color: '#64748b' },
 ]
 
 const SEED_GOLF = {
@@ -125,16 +141,26 @@ const KEYS = {
 // ── Initialize (runs once on first load) ─────────────────────────────────────
 
 export function initStore() {
-  if (load(KEYS.settings, null)?.seeded) return   // already initialized
+  const settings = load(KEYS.settings, null)
 
-  save(KEYS.settings,     SEED_SETTINGS)
-  save(KEYS.transactions, SEED_TRANSACTIONS)
-  save(KEYS.cards,        SEED_CARDS)
-  save(KEYS.loans,        SEED_LOANS)
-  save(KEYS.bills,        SEED_BILLS)
-  save(KEYS.billsStatus,  {})
-  save(KEYS.budget,       SEED_BUDGET_CATEGORIES)
-  save(KEYS.golf,         SEED_GOLF)
+  if (!settings?.seeded) {
+    save(KEYS.settings,     SEED_SETTINGS)
+    save(KEYS.transactions, SEED_TRANSACTIONS)
+    save(KEYS.cards,        SEED_CARDS)
+    save(KEYS.loans,        SEED_LOANS)
+    save(KEYS.bills,        SEED_BILLS)
+    save(KEYS.billsStatus,  {})
+    save(KEYS.budget,       SEED_BUDGET_CATEGORIES)
+    save(KEYS.golf,         SEED_GOLF)
+    return
+  }
+
+  // Migration v2: seed bills + budget if still empty
+  if (!settings.seedVersion || settings.seedVersion < 2) {
+    if (load(KEYS.bills, []).length === 0)  save(KEYS.bills,  SEED_BILLS)
+    if (load(KEYS.budget, []).length === 0) save(KEYS.budget, SEED_BUDGET_CATEGORIES)
+    save(KEYS.settings, { ...settings, seedVersion: 2 })
+  }
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
@@ -340,32 +366,38 @@ export function getGolfBreakEven() {
 export const CATEGORIES = [
   'Auto & Transport',
   'Bills & Utilities',
+  'Chase Loan',
+  'Dining & Drinks',
+  'Eating Out',
   'Entertainment',
-  'Food & Drink',
-  'Groceries',
+  'Everything Else',
   'Golf',
-  'Health & Fitness',
-  'Home',
+  'Groceries',
+  'Health & Wellness',
   'Income',
+  'Loan Payment',
   'Personal Care',
+  'Pets',
+  'Poker',
   'Shopping',
-  'Student Loans',
+  'Software & Tech',
+  'Sports Betting',
   'Travel',
-  'Other',
 ]
 
-// Keyword → category mapping for CSV auto-categorization
 export const KEYWORD_MAP = [
-  { keywords: ['netflix', 'hulu', 'spotify', 'disney', 'hbo', 'apple tv', 'peacock'], cat: 'Entertainment' },
-  { keywords: ['walmart', 'target', 'kroger', 'publix', 'aldi', 'trader joe', 'whole foods', 'costco', 'sam\'s'], cat: 'Groceries' },
-  { keywords: ['mcdonald', 'chipotle', 'chick-fil', 'starbucks', 'doordash', 'uber eats', 'grubhub', 'domino', 'pizza', 'taco bell', 'wendy', 'subway', 'dunkin'], cat: 'Food & Drink' },
-  { keywords: ['shell', 'exxon', 'bp ', 'chevron', 'marathon', 'sunoco', 'quiktrip', 'qt ', 'speedway', 'uber', 'lyft', 'parking'], cat: 'Auto & Transport' },
-  { keywords: ['electric', 'water', 'gas bill', 'internet', 'xfinity', 'att ', 'verizon', 't-mobile', 'spectrum'], cat: 'Bills & Utilities' },
-  { keywords: ['cvs', 'walgreen', 'rite aid', 'pharmacy', 'doctor', 'dental', 'vision', 'gym', 'planet fitness'], cat: 'Health & Fitness' },
+  { keywords: ['netflix', 'hulu', 'spotify', 'disney', 'hbo', 'apple tv', 'peacock', 'youtube'], cat: 'Software & Tech' },
+  { keywords: ['walmart', 'target', 'kroger', 'publix', 'aldi', 'trader joe', 'whole foods', 'costco', "sam's"], cat: 'Groceries' },
+  { keywords: ['mcdonald', 'chipotle', 'chick-fil', 'starbucks', 'doordash', 'uber eats', 'grubhub', 'domino', 'pizza', 'taco bell', "wendy's", 'subway', 'dunkin', 'panera', 'five guys'], cat: 'Dining & Drinks' },
+  { keywords: ['shell', 'exxon', 'bp ', 'chevron', 'marathon', 'sunoco', 'quiktrip', 'qt ', 'speedway', 'uber', 'lyft', 'parking', 'gas station'], cat: 'Auto & Transport' },
+  { keywords: ['electric', 'water bill', 'gas bill', 'internet', 'xfinity', 'att ', 'verizon', 't-mobile', 'spectrum', 'rent', 'fios'], cat: 'Bills & Utilities' },
+  { keywords: ['cvs', 'walgreen', 'rite aid', 'pharmacy', 'doctor', 'dental', 'vision', 'gym', 'planet fitness', 'anytime fitness'], cat: 'Health & Wellness' },
   { keywords: ['amazon', 'ebay', 'etsy', 'best buy', 'apple store', 'simprico'], cat: 'Shopping' },
-  { keywords: ['venmo', 'paypal', 'zelle', 'cashapp', 'direct deposit', 'payroll', 'ach deposit'], cat: 'Income' },
+  { keywords: ['direct deposit', 'payroll', 'ach deposit', 'zelle in', 'venmo in'], cat: 'Income' },
   { keywords: ['golf', 'topgolf', 'pga', 'golfsmith'], cat: 'Golf' },
-  { keywords: ['student loan', 'navient', 'mohela', 'sallie mae'], cat: 'Student Loans' },
+  { keywords: ['student loan', 'navient', 'mohela', 'sallie mae', 'aidvantage'], cat: 'Loan Payment' },
+  { keywords: ['petco', 'petsmart', 'pet supplies', 'vet ', 'veterinary', 'animal hospital'], cat: 'Pets' },
+  { keywords: ['draftkings', 'fanduel', 'betmgm', 'caesars', 'pointsbet'], cat: 'Sports Betting' },
 ]
 
 export function autoCategorize(description) {
