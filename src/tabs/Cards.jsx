@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { getCards, saveCards, getLoans, saveLoans, getBills } from '../store'
+import { getCards, saveCards, getLoans, saveLoans, getBills, getLiveBalance, getAssets, saveAssets } from '../store'
 import BottomSheet from '../components/BottomSheet'
 
 function fmt(n) {
@@ -20,9 +20,11 @@ export default function Cards() {
   const [cards, setCards] = useState([])
   const [loans, setLoans] = useState([])
   const [bills, setBills] = useState([])
+  const [assets, setAssets] = useState([])
   const [editCard, setEditCard] = useState(null)
   const [editLoan, setEditLoan] = useState(null)
-  const [inlineEdit, setInlineEdit] = useState(null) // card id being inline-edited
+  const [editAsset, setEditAsset] = useState(null)
+  const [inlineEdit, setInlineEdit] = useState(null)
   const [inlineVal, setInlineVal] = useState('')
   const inlineRef = useRef()
 
@@ -30,11 +32,28 @@ export default function Cards() {
     setCards(getCards())
     setLoans(getLoans())
     setBills(getBills())
+    setAssets(getAssets())
   }, [])
 
   function refresh() {
     setCards(getCards())
     setLoans(getLoans())
+    setAssets(getAssets())
+  }
+
+  function handleSaveAsset(form) {
+    const all = getAssets()
+    const cleaned = { ...form, balance: parseFloat(form.balance) || 0 }
+    if (form.id) saveAssets(all.map(a => a.id === form.id ? cleaned : a))
+    else saveAssets([...all, { ...cleaned, id: crypto.randomUUID() }])
+    setEditAsset(null)
+    refresh()
+  }
+
+  function handleDeleteAsset(id) {
+    saveAssets(getAssets().filter(a => a.id !== id))
+    setEditAsset(null)
+    refresh()
   }
 
   // Inline balance edit
@@ -89,10 +108,17 @@ export default function Cards() {
     refresh()
   }
 
-  const totalCardDebt    = cards.reduce((s, c) => s + c.balance, 0)
+  const totalCardDebt     = cards.reduce((s, c) => s + c.balance, 0)
   const totalLoanPayments = loans.reduce((s, l) => s + l.monthlyPayment, 0)
-  const totalBillsFixed  = bills.reduce((s, b) => s + b.amount, 0)
-  const totalMonthly     = totalLoanPayments + totalBillsFixed
+  const totalBillsFixed   = bills.reduce((s, b) => s + b.amount, 0)
+  const totalMonthly      = totalLoanPayments + totalBillsFixed
+
+  // Net worth
+  const cashBalance    = getLiveBalance()
+  const totalAssets    = cashBalance + assets.reduce((s, a) => s + a.balance, 0)
+  const totalLoanDebt  = loans.reduce((s, l) => s + (l.balance ?? 0), 0)
+  const totalLiabilities = totalCardDebt + totalLoanDebt
+  const netWorth       = totalAssets - totalLiabilities
 
   return (
     <div className="flex flex-col h-full">
@@ -239,11 +265,77 @@ export default function Cards() {
             </div>
           </div>
         </section>
+
+        {/* Net Worth */}
+        <section>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">Net Worth</p>
+            <button onClick={() => setEditAsset({ name: '', balance: '' })} className="text-emerald-400 text-xs">+ Add Asset</button>
+          </div>
+          <div className="bg-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-700/50">
+            {/* Assets */}
+            <div className="flex justify-between px-4 py-2.5">
+              <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Assets</span>
+            </div>
+            <div className="flex justify-between px-4 py-2.5">
+              <span className="text-slate-300 text-sm">Checking Balance</span>
+              <span className="text-emerald-400 font-medium text-sm">{fmt(cashBalance)}</span>
+            </div>
+            {assets.map(a => (
+              <div key={a.id} className="flex items-center justify-between px-4 py-2.5">
+                <span className="text-slate-300 text-sm flex-1">{a.name}</span>
+                <span className="text-emerald-400 font-medium text-sm mr-2">{fmt(a.balance)}</span>
+                <button onPointerDown={() => setEditAsset(a)} className="text-slate-600 p-1">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+            <div className="flex justify-between px-4 py-2.5 bg-slate-700/20">
+              <span className="text-slate-400 text-sm">Total Assets</span>
+              <span className="text-emerald-400 font-semibold text-sm">{fmt(totalAssets)}</span>
+            </div>
+
+            {/* Liabilities */}
+            <div className="flex justify-between px-4 py-2.5 mt-1">
+              <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Liabilities</span>
+            </div>
+            <div className="flex justify-between px-4 py-2.5">
+              <span className="text-slate-300 text-sm">Card Debt</span>
+              <span className="text-red-400 font-medium text-sm">−{fmt(totalCardDebt)}</span>
+            </div>
+            {loans.filter(l => l.balance).map(l => (
+              <div key={l.id} className="flex justify-between px-4 py-2.5">
+                <span className="text-slate-300 text-sm">{l.name}</span>
+                <span className="text-red-400 font-medium text-sm">−{fmt(l.balance)}</span>
+              </div>
+            ))}
+            {totalLiabilities === totalCardDebt && loans.some(l => !l.balance) && (
+              <div className="px-4 py-2 bg-slate-700/10">
+                <p className="text-slate-500 text-xs">Add loan balances in the Loans section to include them here</p>
+              </div>
+            )}
+            <div className="flex justify-between px-4 py-2.5 bg-slate-700/20">
+              <span className="text-slate-400 text-sm">Total Liabilities</span>
+              <span className="text-red-400 font-semibold text-sm">−{fmt(totalLiabilities)}</span>
+            </div>
+
+            {/* Net Worth total */}
+            <div className="flex justify-between px-4 py-4 bg-slate-700/40">
+              <span className="text-white font-bold text-base">Net Worth</span>
+              <span className={`font-bold text-base ${netWorth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {netWorth < 0 ? '−' : ''}{fmt(Math.abs(netWorth))}
+              </span>
+            </div>
+          </div>
+        </section>
       </div>
 
       {/* Sheets */}
       <CardSheet card={editCard} onClose={() => setEditCard(null)} onSave={handleSaveCard} onDelete={handleDeleteCard} />
       <LoanSheet loan={editLoan} onClose={() => setEditLoan(null)} onSave={handleSaveLoan} onDelete={handleDeleteLoan} />
+      <AssetSheet asset={editAsset} onClose={() => setEditAsset(null)} onSave={handleSaveAsset} onDelete={handleDeleteAsset} />
     </div>
   )
 }
@@ -319,6 +411,36 @@ function LoanSheet({ loan, onClose, onSave, onDelete }) {
           <button type="button" onClick={() => onDelete(loan.id)}
             className="w-full bg-red-500/20 text-red-400 font-semibold rounded-xl py-3">
             Delete Loan
+          </button>
+        )}
+      </form>
+    </BottomSheet>
+  )
+}
+
+function AssetSheet({ asset, onClose, onSave, onDelete }) {
+  const [form, setForm] = useState(asset ?? { name: '', balance: '' })
+  useEffect(() => { setForm(asset ?? { name: '', balance: '' }) }, [asset])
+  if (!asset) return null
+  const isNew = !asset.id
+
+  return (
+    <BottomSheet open={!!asset} onClose={onClose} title={isNew ? 'Add Asset' : 'Edit Asset'}>
+      <p className="text-slate-400 text-sm mb-3">Add savings, investments, or any other asset to include in your net worth.</p>
+      <form onSubmit={e => { e.preventDefault(); onSave(form) }} className="flex flex-col gap-3">
+        <input type="text" placeholder="Account name (e.g. Savings, 401k)" value={form.name}
+          onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+          className="w-full bg-slate-700 text-white rounded-xl px-4 py-3 text-sm placeholder-slate-500" />
+        <input type="number" placeholder="Current balance" inputMode="decimal" step="0.01" value={form.balance}
+          onChange={e => setForm(f => ({ ...f, balance: e.target.value }))}
+          className="w-full bg-slate-700 text-white rounded-xl px-4 py-3 text-sm placeholder-slate-500" />
+        <button type="submit" className="w-full bg-emerald-500 text-white font-semibold rounded-xl py-3">
+          {isNew ? 'Add Asset' : 'Save Changes'}
+        </button>
+        {!isNew && (
+          <button type="button" onClick={() => onDelete(asset.id)}
+            className="w-full bg-red-500/20 text-red-400 font-semibold rounded-xl py-3">
+            Delete Asset
           </button>
         )}
       </form>

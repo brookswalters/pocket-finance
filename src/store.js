@@ -136,6 +136,7 @@ const KEYS = {
   billsStatus: 'pf_bills_status',
   budget:      'pf_budget',
   golf:        'pf_golf',
+  assets:      'pf_assets',
 }
 
 // ── Initialize (runs once on first load) ─────────────────────────────────────
@@ -329,6 +330,16 @@ export function getBudgetActuals(month) {
     actuals[t.cat] = (actuals[t.cat] ?? 0) + t.amt
   }
   return actuals
+}
+
+// ── Assets (for net worth) ────────────────────────────────────────────────────
+
+export function getAssets() {
+  return load(KEYS.assets, [])
+}
+
+export function saveAssets(assets) {
+  save(KEYS.assets, assets)
 }
 
 // ── Golf ──────────────────────────────────────────────────────────────────────
