@@ -37,7 +37,7 @@ export default function App() {
     >
       {/* Page content */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden">
-        <ActiveComponent />
+        <ActiveComponent onNavigate={setActiveTab} />
       </main>
 
       {/* Bottom tab bar */}
