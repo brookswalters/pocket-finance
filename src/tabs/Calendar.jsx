@@ -237,6 +237,7 @@ export default function Calendar() {
           <>
             <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-2">Upcoming</p>
             <UpcomingList events={events} todayStr={todayStr} year={year} month={month} />
+            <GolfVisitsList />
           </>
         )}
       </div>
@@ -278,6 +279,32 @@ function UpcomingList({ events, todayStr, year, month }) {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+function GolfVisitsList() {
+  const golf = getGolf()
+  const visits = [...golf.visits].sort((a, b) => b.date.localeCompare(a.date))
+  if (visits.length === 0) return null
+
+  return (
+    <div className="mt-4">
+      <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-2">Golf Visits (All)</p>
+      <div className="bg-slate-800 rounded-2xl divide-y divide-slate-700/50 overflow-hidden">
+        {visits.map(v => (
+          <div key={v.id} className="flex items-center gap-3 px-4 py-3">
+            <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-slate-300 text-sm truncate">{v.label}</p>
+              <p className="text-slate-500 text-xs">
+                {new Date(v.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+              </p>
+            </div>
+            <span className="text-blue-400 text-sm font-semibold">{fmt(v.price)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

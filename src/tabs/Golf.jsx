@@ -153,37 +153,45 @@ export default function Golf() {
 
         {/* Membership card */}
         <div className="bg-slate-800 rounded-2xl p-4 mb-3">
-          <div className="flex items-start justify-between mb-3">
+          <div className="flex items-start justify-between mb-4">
             <div>
-              <p className="text-slate-400 text-xs">Annual Membership</p>
+              <p className="text-slate-400 text-xs">Membership Cost</p>
               <p className="text-white text-2xl font-bold">{fmt(golf.membershipCost)}</p>
               <p className="text-slate-500 text-xs mt-0.5">
                 Paid {new Date(golf.membershipPaidDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-slate-400 text-xs">{visitsCount} visit{visitsCount !== 1 ? 's' : ''}</p>
-              {visitsCount > 0 && <p className="text-slate-400 text-xs mt-0.5">~{fmt(avgCost)}/round avg</p>}
+              <p className={`text-2xl font-bold ${breakevenReached ? 'text-emerald-400' : 'text-white'}`}>
+                {breakevenReached ? '🎉' : fmt(breakEven.remaining)}
+              </p>
+              <p className="text-slate-500 text-xs mt-0.5">
+                {breakevenReached ? 'Broken even!' : 'left to recover'}
+              </p>
             </div>
           </div>
 
-          {/* Break-even bar */}
+          {/* Countdown bar — full = no visits, empty = broken even */}
           <div className="mb-1.5">
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-slate-400">Break-even progress</span>
-              <span className={breakevenReached ? 'text-emerald-400 font-semibold' : 'text-slate-400'}>
-                {breakevenReached ? '🎉 Broken even!' : `${fmt(breakEven.remaining)} to go`}
-              </span>
+              <span className="text-slate-400">{fmt(totalValue)} recovered via {visitsCount} visit{visitsCount !== 1 ? 's' : ''}</span>
+              {visitsCount > 0 && <span className="text-slate-500">~{fmt(avgCost)}/round</span>}
             </div>
             <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+              {/* Bar shrinks as you recover value */}
               <div
                 className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${breakEven.pct}%`, backgroundColor: barColor }}
+                style={{
+                  width: `${100 - breakEven.pct}%`,
+                  backgroundColor: barColor,
+                  marginLeft: `${breakEven.pct}%`,
+                  transition: 'all 0.5s ease',
+                }}
               />
             </div>
             <div className="flex justify-between text-[10px] mt-1">
-              <span className="text-slate-500">{fmt(totalValue)} value</span>
-              <span className="text-slate-500">{breakEven.pct.toFixed(0)}%</span>
+              <span className="text-emerald-500">{fmt(totalValue)} ✓</span>
+              <span className="text-slate-500">{fmt(golf.membershipCost)}</span>
             </div>
           </div>
         </div>
