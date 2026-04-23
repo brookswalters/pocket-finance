@@ -169,6 +169,33 @@ export function initStore() {
     if (golf) save(KEYS.golf, { ...golf, membershipCost: 590.00 })
     save(KEYS.settings, { ...load(KEYS.settings, settings), seedVersion: 3 })
   }
+
+  // Migration v4: balance reset to Apr 23, mark April bills paid, update card balances
+  if (!settings.seedVersion || settings.seedVersion < 4) {
+    const s = load(KEYS.settings, {})
+    save(KEYS.settings, { ...s, startingBalance: 2689.68, startingBalanceDate: '2026-04-23', seedVersion: 4 })
+
+    // Remove transactions before Apr 23 — baked into new starting balance
+    const txns = load(KEYS.transactions, [])
+    save(KEYS.transactions, txns.filter(t => t.date >= '2026-04-23'))
+
+    // Mark April bills paid by name
+    const bills = load(KEYS.bills, [])
+    const status = load(KEYS.billsStatus, {})
+    const paidNames = ['Rent', 'Car Payment', 'Gym', 'Electric', 'Internet']
+    bills.forEach(b => {
+      if (paidNames.includes(b.name)) status[`${b.id}-2026-04`] = true
+    })
+    save(KEYS.billsStatus, status)
+
+    // Update card balances — AB paid off, USAA pending clears by Friday
+    const cards = load(KEYS.cards, [])
+    save(KEYS.cards, cards.map(c => {
+      if (c.name === 'USAA')    return { ...c, balance: 476.04 } // still pending
+      if (c.name === 'AB Card') return { ...c, balance: 0 }
+      return c
+    }))
+  }
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
