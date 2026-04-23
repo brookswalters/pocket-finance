@@ -170,6 +170,17 @@ export function initStore() {
     save(KEYS.settings, { ...load(KEYS.settings, settings), seedVersion: 3 })
   }
 
+  // Migration v7: add USAA and AB card payments as bills
+  if (!settings.seedVersion || settings.seedVersion < 7) {
+    const bills = load(KEYS.bills, [])
+    const hasUSAA = bills.some(b => b.name === 'USAA Payment')
+    const hasAB   = bills.some(b => b.name === 'AB Card Payment')
+    if (!hasUSAA) bills.push({ id: crypto.randomUUID(), name: 'USAA Payment',    amount: 576.00, dueDay: 27, category: 'Bills & Utilities', autopay: false, active: true })
+    if (!hasAB)   bills.push({ id: crypto.randomUUID(), name: 'AB Card Payment', amount: 324.38, dueDay: 3,  category: 'Bills & Utilities', autopay: false, active: true })
+    save(KEYS.bills, bills)
+    save(KEYS.settings, { ...load(KEYS.settings, {}), seedVersion: 7 })
+  }
+
   // Migration v6: bake in $250 Nintendo Switch cash to starting balance
   if (!settings.seedVersion || settings.seedVersion < 6) {
     const s = load(KEYS.settings, {})
