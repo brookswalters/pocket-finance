@@ -170,6 +170,12 @@ export function initStore() {
     save(KEYS.settings, { ...load(KEYS.settings, settings), seedVersion: 3 })
   }
 
+  // Migration v6: bake in $250 Nintendo Switch cash to starting balance
+  if (!settings.seedVersion || settings.seedVersion < 6) {
+    const s = load(KEYS.settings, {})
+    save(KEYS.settings, { ...s, startingBalance: 2939.68, seedVersion: 6 })
+  }
+
   // Migration v5: correct card balances and due dates
   if (!settings.seedVersion || settings.seedVersion < 5) {
     const cards = load(KEYS.cards, [])
@@ -184,7 +190,7 @@ export function initStore() {
   // Migration v4: balance reset to Apr 23, mark April bills paid, update card balances
   if (!settings.seedVersion || settings.seedVersion < 4) {
     const s = load(KEYS.settings, {})
-    save(KEYS.settings, { ...s, startingBalance: 2689.68, startingBalanceDate: '2026-04-23', seedVersion: 4 })
+    save(KEYS.settings, { ...s, startingBalance: 2939.68, startingBalanceDate: '2026-04-23', seedVersion: 4 })
 
     // Remove transactions before Apr 23 — baked into new starting balance
     const txns = load(KEYS.transactions, [])
