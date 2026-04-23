@@ -170,6 +170,17 @@ export function initStore() {
     save(KEYS.settings, { ...load(KEYS.settings, settings), seedVersion: 3 })
   }
 
+  // Migration v5: correct card balances and due dates
+  if (!settings.seedVersion || settings.seedVersion < 5) {
+    const cards = load(KEYS.cards, [])
+    save(KEYS.cards, cards.map(c => {
+      if (c.name === 'USAA')    return { ...c, balance: 576.00, dueDay: 27 }
+      if (c.name === 'AB Card') return { ...c, balance: 324.38, dueDay: 3 }
+      return c
+    }))
+    save(KEYS.settings, { ...load(KEYS.settings, {}), seedVersion: 5 })
+  }
+
   // Migration v4: balance reset to Apr 23, mark April bills paid, update card balances
   if (!settings.seedVersion || settings.seedVersion < 4) {
     const s = load(KEYS.settings, {})
@@ -188,11 +199,11 @@ export function initStore() {
     })
     save(KEYS.billsStatus, status)
 
-    // Update card balances — AB paid off, USAA pending clears by Friday
+    // Update card balances and due dates
     const cards = load(KEYS.cards, [])
     save(KEYS.cards, cards.map(c => {
-      if (c.name === 'USAA')    return { ...c, balance: 476.04 } // still pending
-      if (c.name === 'AB Card') return { ...c, balance: 0 }
+      if (c.name === 'USAA')    return { ...c, balance: 576.00, dueDay: 27 }
+      if (c.name === 'AB Card') return { ...c, balance: 324.38, dueDay: 3 }
       return c
     }))
   }
